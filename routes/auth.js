@@ -1,76 +1,74 @@
-var express = require("express");
-var router = express.Router();
-const MySql = require("../routes/utils/MySql");
+const express = require("express");
+const router = express.Router();
 const DButils = require("../routes/utils/DButils");
 const bcrypt = require("bcrypt");
 
+// Register route
 router.post("/Register", async (req, res, next) => {
   try {
-    // parameters exists
-    // valid parameters
-    // username exists
-    let user_details = {
-      username: req.body.username,
-      firstname: req.body.firstname,
-      lastname: req.body.lastname,
-      country: req.body.country,
-      password: req.body.password,
-      email: req.body.email,
-      profilePic: req.body.profilePic
+    const { username, firstname, lastname, country, password, email, profilePic } = req.body;
+
+    // Validate required fields
+    if (!username || !firstname || !lastname || !country || !password || !email) {
+      return res.status(400).send({ message: "Missing required fields" });
     }
-    let users = [];
-    users = await DButils.execQuery("SELECT username from users");
 
-    if (users.find((x) => x.username === user_details.username))
-      throw { status: 409, message: "Username taken" };
+    // Check if the username already exists
+    const users = await DButils.execQuery("SELECT username FROM users WHERE username = ?", [username]);
+    if (users.length > 0) {
+      return res.status(409).send({ message: "Username already taken" });
+    }
 
-    // add the new username
-    let hash_password = bcrypt.hashSync(
-      user_details.password,
-      parseInt(process.env.bcrypt_saltRounds)
-    );
+    // Hash the password asynchronously
+    const saltRounds = parseInt(process.env.bcrypt_saltRounds) || 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Insert the new user into the database
     await DButils.execQuery(
-      `INSERT INTO users VALUES ('${user_details.username}', '${user_details.firstname}', '${user_details.lastname}',
-      '${user_details.country}', '${hash_password}', '${user_details.email}')`
+      "INSERT INTO users (username, firstname, lastname, country, password, email, profilePic) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [username, firstname, lastname, country, hashedPassword, email, profilePic]
     );
-    res.status(201).send({ message: "user created", success: true });
+
+    res.status(201).send({ message: "User created successfully", success: true });
   } catch (error) {
     next(error);
   }
 });
 
+// Login route
 router.post("/Login", async (req, res, next) => {
   try {
-    // check that username exists
-    const users = await DButils.execQuery("SELECT username FROM users");
-    if (!users.find((x) => x.username === req.body.username))
-      throw { status: 401, message: "Username or Password incorrect" };
+    const { username, password } = req.body;
 
-    // check that the password is correct
-    const user = (
-      await DButils.execQuery(
-        `SELECT * FROM users WHERE username = '${req.body.username}'`
-      )
-    )[0];
-
-    if (!bcrypt.compareSync(req.body.password, user.password)) {
-      throw { status: 401, message: "Username or Password incorrect" };
+    if (!username || !password) {
+      return res.status(400).send({ message: "Missing username or password" });
     }
 
-    // Set cookie
-    req.session.user_id = user.user_id;
+    // Check if the username exists
+    const user = await DButils.execQuery("SELECT * FROM users WHERE username = ?", [username]);
+    if (user.length === 0) {
+      return res.status(401).send({ message: "Username or Password incorrect" });
+    }
 
+    // Check if the password is correct
+    const validPassword = await bcrypt.compare(password, user[0].password);
+    if (!validPassword) {
+      return res.status(401).send({ message: "Password incorrect" });
+    }
 
-    // return cookie
-    res.status(200).send({ message: "login succeeded", success: true });
+    // Set session user ID
+    req.session.user_id = user[0].user_id;
+
+    res.status(200).send({ message: "Login succeeded", success: true });
   } catch (error) {
     next(error);
   }
 });
 
+// Logout route
 router.post("/Logout", function (req, res) {
-  req.session.reset(); // reset the session info --> send cookie when  req.session == undefined!!
-  res.send({ success: true, message: "logout succeeded" });
+  req.session.reset(); // Reset the session info
+  res.send({ success: true, message: "Logout succeeded" });
 });
 
 module.exports = router;
