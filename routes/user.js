@@ -7,6 +7,7 @@ const recipe_utils = require("./utils/recipes_utils");
 /**
  * Middleware to authenticate all incoming requests
  */
+//every time a request is made, this check is executed before the request proceeds to any route handlers.
 router.use(async function (req, res, next) {
   if (req.session && req.session.user_id) {
     try {
@@ -40,7 +41,7 @@ router.post('/favorites', async (req, res, next) => {
 
     // Check if the recipe is already a favorite
     const existingFavorite = await DButils.execQuery(
-      "SELECT * FROM FavoriteRecipes WHERE user_id = ? AND recipe_id = ?",
+      "SELECT * FROM Favorites WHERE user_id = ? AND recipe_id = ?",
       [user_id, recipe_id]
     );
     if (existingFavorite.length > 0) {
@@ -60,21 +61,29 @@ router.post('/favorites', async (req, res, next) => {
  */
 router.get('/favorites', async (req, res, next) => {
   try {
+    //take the user id from the current logged in user
     const user_id = req.session.user_id;
 
     // Fetch favorite recipe IDs for the user
     const recipes_id = await user_utils.getFavoriteRecipes(user_id);
-
+        // //debug to check if recipes map is back with the same results
+        // console.log( recipes_id.map(row => row.recipe_id))
     // Handle case when no favorite recipes exist
     if (!recipes_id.length) {
       return res.status(200).send({ message: "No favorite recipes found", success: true, recipes: [] });
     }
 
     // Extract recipe IDs into an array
-    const recipes_id_array = recipes_id.map((element) => element.recipe_id);
+    const recipes_id_array = recipes_id.map(element => element.recipe_id.toString());
+
+    // Debug to check the array before making the API calls
+    console.log('recipes_id_array before fetching previews:', recipes_id_array);
 
     // Fetch the recipe details
-    const results = await recipe_utils.getRecipesPreview(recipes_id_array);
+    const results = await recipe_utils.getRecipesPreview(recipes_id_array, user_id);
+    // Debugging log to verify results
+    console.log('Retrieved favorite recipes:', results);
+
     res.status(200).send({ message: "Favorite recipes retrieved successfully", success: true, recipes: results });
   } catch (error) {
     next(error);

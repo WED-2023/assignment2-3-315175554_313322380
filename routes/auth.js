@@ -25,7 +25,7 @@ router.post("/Register", async (req, res, next) => {
 
     // Insert the new user into the database
     await DButils.execQuery(
-      "INSERT INTO users (username, firstname, lastname, country, password, email, profilePic) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO users (username, firstname, lastname, country, hash_password, email, profilePic) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [username, firstname, lastname, country, hashedPassword, email, profilePic]
     );
 
@@ -51,7 +51,8 @@ router.post("/Login", async (req, res, next) => {
     }
 
     // Check if the password is correct
-    const validPassword = await bcrypt.compare(password, user[0].password);
+
+    const validPassword = await bcrypt.compare(password, user[0].hash_password);
     if (!validPassword) {
       return res.status(401).send({ message: "Password incorrect" });
     }

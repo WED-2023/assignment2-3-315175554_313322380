@@ -54,29 +54,52 @@ async function searchRecipe(recipeName, cuisine, diet, intolerance, number, user
     }
 }
 
+
 // Get recipe preview details for a list of recipe IDs
-async function getRecipesPreview(recipeIds, username) {
+async function getRecipesPreview(recipeIds) {
     try {
-        const recipePromises = recipeIds.map(id => getRecipeInformation(id));
-        const recipesInfo = await Promise.all(recipePromises);
-
-        return recipesInfo.map(recipeInfo => {
-            let { id, title, readyInMinutes, image, aggregateLikes } = recipeInfo.data;
-
+      console.log('Fetching previews for recipe IDs:', recipeIds);
+  
+      // Map over valid IDs and fetch recipe information
+      const recipePromises = recipeIds.map(async (id) => {
+        try {
+          // Fetch recipe information for each valid ID
+          const recipeInfo = await getRecipeInformation(id);
+  
+          // Ensure `recipeInfo` has the expected structure
+          if (recipeInfo && recipeInfo.data) {
+            // Safely destructure fields from `recipeInfo.data`
+            const { id: recipeId, title, readyInMinutes, image, aggregateLikes } = recipeInfo.data;
+  
+            // Return the structured recipe data
             return {
-                id,
-                title,
-                readyInMinutes,
-                image,
-                popularity: aggregateLikes,
-                username // Optionally include user-specific data
+              id: recipeId,
+              title,
+              readyInMinutes,
+              image,
+              popularity: aggregateLikes,
             };
-        });
+          } else {
+            // Handle unexpected response structure
+            console.error(`Unexpected response structure for recipe ID: ${id}`, recipeInfo);
+            return null;
+          }
+        } catch (error) {
+          console.error(`Failed to fetch information for recipe ID: ${id}`, error);
+          return null; // Return null for failed requests to be filtered out later
+        }
+      });
+  
+      // Await all promises and filter out any failed requests
+      const recipesInfo = (await Promise.all(recipePromises)).filter(info => info !== null);
+  
+      return recipesInfo;
     } catch (error) {
-        console.error('Error fetching recipe previews', error);
-        throw new Error('Failed to fetch recipe previews');
+      console.error('Error fetching recipe previews', error);
+      throw new Error('Failed to fetch recipe previews');
     }
-}
+  }
+  
 
 module.exports = {
     getRecipeDetails,

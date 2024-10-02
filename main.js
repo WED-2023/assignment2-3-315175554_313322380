@@ -75,7 +75,7 @@ app.get("/alive", (req, res) => res.send("I'm alive"));
 // Routes
 app.use("/users", user);
 app.use("/recipes", recipes);
-app.use(auth);
+app.use("/auth", auth);
 
 // Error handling
 app.use(function (err, req, res, next) {

@@ -4,10 +4,10 @@ require("dotenv").config();  // Load environment variables
 // Configuration for MySQL connection
 const config = {
   connectionLimit: 4,
-  host: process.env.DB_HOST || "localhost",   // Use environment variable or default to localhost
-  user: process.env.DB_USER || "root",        // Use environment variable or default to root
-  password: process.env.DB_PASSWORD || "pass_root@PesPesBa260!",  // Use environment variable or hardcoded password
-  database: process.env.DB_NAME || "project"  // Use environment variable or default to "project"
+  host: process.env.DB_HOST, 
+  user: process.env.DB_USER ,
+  password: process.env.DB_PASSWORD ,
+  database: process.env.DB_NAME,
 };
 
 // Create a MySQL connection pool
