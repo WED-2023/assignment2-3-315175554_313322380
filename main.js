@@ -8,6 +8,7 @@ const DButils = require("./routes/utils/DButils");
 var cors = require('cors');
 
 var app = express();
+///app.use(morgan('dev')); // Logs requests
 app.use(logger("dev")); // Development logging
 app.use(express.json()); // Parse application/json
 app.use(express.urlencoded({ extended: false })); // Parse application/x-www-form-urlencoded
@@ -44,8 +45,7 @@ const corsConfig = {
 app.use(cors(corsConfig));
 app.options("*", cors(corsConfig)); // Enable pre-flight requests
 
-var port = process.env.PORT || "8080"; // Use 3000 for local, 80 for remote
-//#endregion
+var port = process.env.PORT || "3000"; // Use 3000 for local, 80 for remote
 
 const user = require("./routes/user");
 const recipes = require("./routes/recipes");

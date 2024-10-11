@@ -8,10 +8,31 @@ router.post("/Register", async (req, res, next) => {
   try {
     const { username, firstname, lastname, country, password, email, profilePic } = req.body;
 
-    // Validate required fields
-    if (!username || !firstname || !lastname || !country || !password || !email) {
-      return res.status(400).send({ message: "Missing required fields" });
-    }
+// Validate required fields individually and log each missing field
+if (!username) {
+  console.log("Username is missing");
+  return res.status(400).send({ message: "Username is required" });
+}
+if (!firstname) {
+  console.log("First name is missing");
+  return res.status(400).send({ message: "First name is required" });
+}
+if (!lastname) {
+  console.log("Last name is missing");
+  return res.status(400).send({ message: "Last name is required" });
+}
+if (!country) {
+  console.log("Country is missing");
+  return res.status(400).send({ message: "Country is required" });
+}
+if (!password) {
+  console.log("Password is missing");
+  return res.status(400).send({ message: "Password is required" });
+}
+if (!email) {
+  console.log("Email is missing");
+  return res.status(400).send({ message: "Email is required" });
+}
 
     // Check if the username already exists
     const users = await DButils.execQuery("SELECT username FROM users WHERE username = ?", [username]);
