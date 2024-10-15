@@ -2,14 +2,15 @@ require("dotenv").config();
 //#region express configures
 var express = require("express");
 var path = require("path");
-var logger = require("morgan");
+var morgan = require("morgan");  // Import the 'morgan' module
 const session = require("client-sessions");
 const DButils = require("./routes/utils/DButils");
 var cors = require('cors');
 
 var app = express();
-///app.use(morgan('dev')); // Logs requests
-app.use(logger("dev")); // Development logging
+
+// Use a valid Morgan format, such as 'dev' for development
+app.use(morgan('dev')); // Logs requests
 app.use(express.json()); // Parse application/json
 app.use(express.urlencoded({ extended: false })); // Parse application/x-www-form-urlencoded
 
