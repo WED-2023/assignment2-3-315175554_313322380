@@ -1,101 +1,105 @@
+
 const axios = require("axios");
 const api_domain = "https://api.spoonacular.com/recipes";
 
-
-
 /**
- * Get recipes list from spooncular response and extract the relevant recipe data for preview
- * @param {*} recipes_info 
+ * Get recipe information from Spoonacular API by recipe ID
+ * @param {number} recipe_id
  */
-
-
 async function getRecipeInformation(recipe_id) {
-    return await axios.get(`${api_domain}/${recipe_id}/information`, {
-        params: {
-            includeNutrition: false,
-            apiKey: process.env.spooncular_apiKey
-        }
-    });
-}
-/**
- * 
- * 
- * with this function we get number of random recipes inforamtion
- */
-/**
- * Get random recipes from Spoonacular API
- * @param {*} number 
- * @param {*} includeTags  
- * @param {*} excludeTags 
- */
-async function getRandomRecipeInformation(number) {
-  try {
-      const response = await axios.get(`${api_domain}/random`, {
-          params: {
-              number: number,
-              apiKey: process.env.spooncular_apiKey
+    try {
+        const response = await axios.get(`${api_domain}/${recipe_id}/information`, {
+            params: {
+                includeNutrition: false,
+                apiKey: process.env.spooncular_apiKey
             }
-      });
-      
-      if (response && response.data && response.data.recipes) {
-          const recipesDetails = response.data.recipes.map(recipe => {
-              const { id, title, readyInMinutes, image, aggregateLikes, vegan, vegetarian, glutenFree } = recipe;
-              return {
-                  id,
-                  title,
-                  readyInMinutes,
-                  image,
-                  popularity: aggregateLikes,
-                  vegan,
-                  vegetarian,
-                  glutenFree
-              };
-          });
-          return recipesDetails;
-      } else {
-          throw new Error('No recipes found');
-      }
-  } catch (error) {
-      console.error('Error fetching random recipes:', error);
-      throw error;
-  }
-}
-
-
-
-async function getRecipeDetails(recipe_id) {
-    let recipe_info = await getRecipeInformation(recipe_id);
-    let { id, title, readyInMinutes, image, aggregateLikes, vegan, vegetarian, glutenFree } = recipe_info.data;
-
-    return {
-        id: id,
-        title: title,
-        readyInMinutes: readyInMinutes,
-        image: image,
-        popularity: aggregateLikes,
-        vegan: vegan,
-        vegetarian: vegetarian,
-        glutenFree: glutenFree,
-        
+        });
+        return response.data;
+    } catch (error) {
+        throw new Error("Failed to fetch recipe information.");
     }
 }
 
-async function searchRecipe(recipeName, cuisine, diet, intolerance, number, username) {
-    const response = await axios.get(`${api_domain}/complexSearch`, {
-        params: {
-            query: recipeName,
-            cuisine: cuisine,
-            diet: diet,
-            intolerances: intolerance,
-            number: number,
-            apiKey: process.env.spooncular_apiKey
-        }
-    });
+/**
+ * Get random recipes from Spoonacular API
+ * @param {number} number 
+ */
+async function getRandomRecipeInformation(number) {
+    try {
+        const response = await axios.get(`${api_domain}/random`, {
+            params: {
+                number: number,
+                apiKey: process.env.spooncular_apiKey
+            }
+        });
 
-    return getRecipesPreview(response.data.results.map((element) => element.id), username);
+        if (response.data && response.data.recipes) {
+            return response.data.recipes.map((recipe) => ({
+                id: recipe.id,
+                title: recipe.title,
+                readyInMinutes: recipe.readyInMinutes,
+                image: recipe.image,
+                aggregateLikes: recipe.aggregateLikes,
+                vegan: recipe.vegan,
+                vegetarian: recipe.vegetarian,
+                glutenFree: recipe.glutenFree,
+            }));
+        } else {
+            throw new Error("No random recipes found.");
+        }
+    } catch (error) {
+        throw new Error("Error fetching random recipes.");
+    }
 }
 
+/**
+ * Get full details of a recipe by its ID
+ * @param {number} recipe_id
+ */
+async function getRecipeDetails(recipe_id) {
+    const recipe_info = await getRecipeInformation(recipe_id);
+    const { id, title, readyInMinutes, image, aggregateLikes, vegan, vegetarian, glutenFree } = recipe_info;
 
+    return {
+        id,
+        title,
+        readyInMinutes,
+        image,
+        popularity: aggregateLikes,
+        vegan,
+        vegetarian,
+        glutenFree,
+    };
+}
+
+/**
+ * Search for recipes based on various criteria
+ * @param {string} recipeName 
+ * @param {string} cuisine 
+ * @param {string} diet 
+ * @param {string} intolerance 
+ * @param {number} number 
+ */
+async function searchRecipe(recipeName, cuisine, diet, intolerance, number) {
+    try {
+      const params = {
+        query: recipeName,
+        number: number || 5,
+        apiKey: process.env.spooncular_apiKey
+      };
+  
+      if (cuisine) params.cuisine = cuisine;
+      if (diet) params.diet = diet;
+      if (intolerance) params.intolerances = intolerance;
+  
+      const response = await axios.get(`${api_domain}/complexSearch`, { params });
+  
+      return response.data.results.map(element => element.id);
+    } catch (error) {
+      throw new Error("Error searching for recipes.");
+    }
+  }
 
 exports.getRecipeDetails = getRecipeDetails;
 exports.getRandomRecipeInformation = getRandomRecipeInformation;
+exports.searchRecipe = searchRecipe;
