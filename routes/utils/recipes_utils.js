@@ -58,7 +58,7 @@ async function getRandomRecipeInformation(number) {
  */
 async function getRecipeDetails(recipe_id) {
     const recipe_info = await getRecipeInformation(recipe_id);
-    const { id, title, readyInMinutes, image, aggregateLikes, vegan, vegetarian, glutenFree } = recipe_info;
+    const { id, title, readyInMinutes, image, aggregateLikes, vegan, vegetarian, glutenFree, extendedIngredients, analyzedInstructions } = recipe_info;
 
     return {
         id,
@@ -69,8 +69,12 @@ async function getRecipeDetails(recipe_id) {
         vegan,
         vegetarian,
         glutenFree,
+        extendedIngredients,
+        instructions: analyzedInstructions.length > 0 ? analyzedInstructions[0].steps : [] // Add instructions
     };
 }
+
+
 
 /**
  * Search for recipes based on various criteria
@@ -82,23 +86,33 @@ async function getRecipeDetails(recipe_id) {
  */
 async function searchRecipe(recipeName, cuisine, diet, intolerance, number) {
     try {
-      const params = {
-        query: recipeName,
-        number: number || 5,
-        apiKey: process.env.spooncular_apiKey
-      };
-  
-      if (cuisine) params.cuisine = cuisine;
-      if (diet) params.diet = diet;
-      if (intolerance) params.intolerances = intolerance;
-  
-      const response = await axios.get(`${api_domain}/complexSearch`, { params });
-  
-      return response.data.results.map(element => element.id);
+        const apiKey = process.env.spooncular_apiKey;
+        if (!apiKey) {
+            throw new Error("Missing Spoonacular API key.");
+        }
+
+        const params = {
+            titleMatch: recipeName, // Focus on title match instead of broad query
+            number: number || 5,
+            apiKey: apiKey
+        };
+
+        if (cuisine) params.cuisine = cuisine;
+        if (diet) params.diet = diet;
+        if (intolerance) params.intolerances = intolerance;
+
+        const response = await axios.get(`${api_domain}/complexSearch`, { params });
+
+        if (response.data.results.length === 0) {
+            throw new Error(`No recipes found for "${recipeName}".`);
+        }
+
+        return response.data.results.map(element => element.id);
     } catch (error) {
-      throw new Error("Error searching for recipes.");
+        throw new Error("Error searching for recipes.");
     }
-  }
+}
+
 
 exports.getRecipeDetails = getRecipeDetails;
 exports.getRandomRecipeInformation = getRandomRecipeInformation;
