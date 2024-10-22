@@ -73,9 +73,13 @@ router.get("/search", async (req, res, next) => {
 router.get("/:recipeId", async (req, res, next) => {
     try {
         const recipe = await recipes_utils.getRecipeDetails(req.params.recipeId);
-        res.send(recipe);
+        if (!recipe) {
+            return res.status(404).json({ message: "Recipe not found" });
+        }
+        res.status(200).json(recipe); // Sending the recipe back as JSON
     } catch (error) {
-        next(error);
+        console.error("Error fetching recipe details:", error);
+        next(error); // Pass error to error-handling middleware
     }
 });
 
