@@ -1,5 +1,5 @@
 
-# Recipe Explorer - Server
+# Recipe Management - Server
 
 This project is the backend part of Recipe Explorer, responsible for handling user management, processing data, and facilitating communication with external APIs. The server is built using Node.js and Express.js to ensure a scalable and efficient backend for the application.
 
