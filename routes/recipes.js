@@ -13,9 +13,15 @@ router.get("/", (req, res) => res.send("API is working"));
  */
 router.get("/search", async (req, res, next) => {
     try {
-        const { recipeName, cuisine, diet, intolerance, number = 5 } = req.query;
-        const results = await recipes_utils.searchRecipe(recipeName, cuisine, diet, intolerance, number);
-        res.send(results);
+        const { titleMatch, cuisine, diet, intolerance, number = 5 } = req.query;
+        const results = await recipes_utils.searchRecipe(titleMatch, cuisine, diet, intolerance, number);
+        
+        // Fetch full recipe details for each recipe ID
+        const recipeDetailsPromises = results.map(id => recipes_utils.getRecipeDetails(id));
+        const recipeDetails = await Promise.all(recipeDetailsPromises);
+        
+        console.log("Search API response:", recipeDetails);
+        res.send(recipeDetails);
     } catch (error) {
         next(error);
     }

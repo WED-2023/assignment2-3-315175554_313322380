@@ -78,13 +78,13 @@ async function getRecipeDetails(recipe_id) {
 
 /**
  * Search for recipes based on various criteria
- * @param {string} recipeName 
+ * @param {string} titleMatch 
  * @param {string} cuisine 
  * @param {string} diet 
  * @param {string} intolerance 
  * @param {number} number 
  */
-async function searchRecipe(recipeName, cuisine, diet, intolerance, number) {
+async function searchRecipe(titleMatch, cuisine, diet, intolerance, number) {
     try {
         const apiKey = process.env.spooncular_apiKey;
         if (!apiKey) {
@@ -92,7 +92,7 @@ async function searchRecipe(recipeName, cuisine, diet, intolerance, number) {
         }
 
         const params = {
-            titleMatch: recipeName, // Focus on title match instead of broad query
+            titleMatch: titleMatch, // Focus on title match instead of broad query
             number: number || 5,
             apiKey: apiKey
         };
@@ -102,11 +102,12 @@ async function searchRecipe(recipeName, cuisine, diet, intolerance, number) {
         if (intolerance) params.intolerances = intolerance;
 
         const response = await axios.get(`${api_domain}/complexSearch`, { params });
+        
 
         if (response.data.results.length === 0) {
-            throw new Error(`No recipes found for "${recipeName}".`);
+            throw new Error(`No recipes found for "${titleMatch}".`);
         }
-
+        console.log(response)
         return response.data.results.map(element => element.id);
     } catch (error) {
         throw new Error("Error searching for recipes.");
