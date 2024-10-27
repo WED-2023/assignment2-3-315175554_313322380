@@ -4,90 +4,86 @@ const DButils = require("./utils/DButils");
 const user_utils = require("./utils/user_utils");
 const recipe_utils = require("./utils/recipes_utils");
 
-/**
- * Middleware to authenticate all incoming requests
- */
-//every time a request is made, this check is executed before the request proceeds to any route handlers.
+// Middleware to check if user_id is provided and user exists in the database
 router.use(async function (req, res, next) {
-  if (req.session && req.session.user_id) {
-    try {
-      const users = await DButils.execQuery("SELECT user_id FROM users WHERE user_id = ?", [req.session.user_id]);
-      if (users.length > 0) {
-        req.user_id = req.session.user_id;
-        next();
-      } else {
-        res.sendStatus(401); // Unauthorized
-      }
-    } catch (err) {
-      next(err);
+  // Log the incoming request
+  console.log("Incoming request:", req.method, req.originalUrl);
+
+  // Check if user_id is provided in the request parameters or session
+  const user_id = req.params.user_id || (req.session && req.session.user ? req.session.user.user_id : null);
+
+  if (!user_id) {
+    console.log("User ID is missing");
+    return res.sendStatus(401); // No user ID in request, unauthorized
+  }
+
+  try {
+    // Query to check if user exists in the database
+    const users = await DButils.execQuery("SELECT user_id FROM users WHERE user_id = ?", [user_id]);
+    
+    if (users.length > 0) {
+      req.user = users[0]; // Store user data in req object for subsequent use
+      next(); // Proceed to the next middleware/route
+    } else {
+      console.log("User not found in database");
+      res.sendStatus(401); // Unauthorized access
     }
-  } else {
-    res.sendStatus(401); // Unauthorized
+  } catch (err) {
+    console.error("Database query error:", err);
+    next(err); // Handle errors by passing to next middleware
   }
 });
 
-/**
- * Route to add a recipe to the user's favorite list
- */
-router.post('/favorites', async (req, res, next) => {
+// Route to add a recipe to favorites
+router.post("/favorites", async (req, res, next) => {
+  const { user_id, recipe_id } = req.body;
+
+  if (!user_id || !recipe_id) {
+    return res.status(400).send({ success: false, message: "User ID and Recipe ID are required" });
+  }
+
   try {
-    const user_id = req.session.user_id;
-    const recipe_id = req.body.recipeId;
-
-    // Check if recipeId is provided
-    if (!recipe_id) {
-      return res.status(400).send({ message: "Recipe ID is required", success: false });
-    }
-
-    // Check if the recipe is already a favorite
-    const existingFavorite = await DButils.execQuery(
-      "SELECT * FROM Favorites WHERE user_id = ? AND recipe_id = ?",
-      [user_id, recipe_id]
-    );
-    if (existingFavorite.length > 0) {
-      return res.status(409).send({ message: "Recipe is already in favorites", success: false });
-    }
-
-    // Mark the recipe as favorite
     await user_utils.markAsFavorite(user_id, recipe_id);
-    res.status(200).send({ message: "Recipe successfully saved as favorite", success: true });
+    res.status(201).send({ success: true, message: "Recipe added to favorites" });
   } catch (error) {
+    console.error("Error adding favorite:", error);
     next(error);
   }
 });
 
-/**
- * Route to get all favorite recipes of the logged-in user
- */
-router.get('/favorites', async (req, res, next) => {
+router.delete("/favorites", async (req, res, next) => {
+  const { user_id, recipe_id } = req.body;
+
+  if (!user_id || !recipe_id) {
+    return res.status(400).send({ success: false, message: "User ID and Recipe ID are required" });
+  }
+
   try {
-    //take the user id from the current logged in user
-    const user_id = req.session.user_id;
-
-    // Fetch favorite recipe IDs for the user
-    const recipes_id = await user_utils.getFavoriteRecipes(user_id);
-        // //debug to check if recipes map is back with the same results
-        // console.log( recipes_id.map(row => row.recipe_id))
-    // Handle case when no favorite recipes exist
-    if (!recipes_id.length) {
-      return res.status(200).send({ message: "No favorite recipes found", success: true, recipes: [] });
-    }
-
-    // Extract recipe IDs into an array
-    const recipes_id_array = recipes_id.map(element => element.recipe_id.toString());
-
-    // Debug to check the array before making the API calls
-    console.log('recipes_id_array before fetching previews:', recipes_id_array);
-
-    // Fetch the recipe details
-    const results = await recipe_utils.getRecipesPreview(recipes_id_array, user_id);
-    // Debugging log to verify results
-    console.log('Retrieved favorite recipes:', results);
-
-    res.status(200).send({ message: "Favorite recipes retrieved successfully", success: true, recipes: results });
+    await user_utils.removeFavorite(user_id, recipe_id);
+    res.send({ success: true, message: "Recipe removed from favorites" });
   } catch (error) {
+    console.error("Error removing favorite:", error);
     next(error);
   }
 });
+
+
+// In user.js
+router.get("/favorites", async (req, res, next) => {
+  const { user_id } = req.query;
+
+  if (!user_id) {
+    return res.status(400).send({ success: false, message: "User ID is required" });
+  }
+
+  try {
+    const favoriteRecipes = await user_utils.getFavoriteRecipes(user_id);
+    res.send(favoriteRecipes);
+  } catch (error) {
+    console.error("Error fetching favorite recipes:", error);
+    next(error);
+  }
+});
+
 
 module.exports = router;

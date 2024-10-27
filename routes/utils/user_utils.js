@@ -36,56 +36,33 @@ async function checkRecipeExists(recipe_id) {
     }
 }
 
-
-/**
- * Marks a recipe as a favorite for the given user.
- * @param {string} user_id - The ID of the user.
- * @param {number} recipe_id - The ID of the recipe.
- */
 async function markAsFavorite(user_id, recipe_id) {
-    try {
-        // Check if recipe exists in Spoonacular API
-        const recipeExists = await checkRecipeExists(recipe_id);
+    console.log(`Inserting favorite for user ${user_id}, recipe ${recipe_id}`);
+    await DButils.execQuery(
+      `INSERT INTO favorites (user_id, recipe_id) VALUES ('${user_id}', '${recipe_id}')`
+    );
+  }
+  async function removeFavorite(user_id, recipe_id) {
+    await DButils.execQuery(
+      `DELETE FROM favorites WHERE user_id = '${user_id}' AND recipe_id = '${recipe_id}'`
+    );
+  }
+  
+  
 
-        if (!recipeExists) {
-            throw new Error("Recipe does not exist");
-        }
-
-        // Use a parameterized query to prevent SQL injection
-        await DButils.execQuery(
-            `INSERT INTO Favorites (user_id, recipe_id) VALUES (?, ?)`,
-            [user_id, recipe_id]
-        );
-    } catch (error) {
-        console.error("Error marking recipe as favorite:", error);
-        throw new Error("Failed to mark recipe as favorite");
-    }
-}
-
-/**
- * Retrieves the list of favorite recipe IDs for a given user.
- * @param {string} user_id - The ID of the user.
- * @returns {Promise<Array>} - A promise that resolves to an array of recipe IDs.
- */
-async function getFavoriteRecipes(user_id) {
-    try {
-        // Use a parameterized query to fetch favorite recipes
-        const recipes = await DButils.execQuery(
-            `SELECT recipe_id FROM Favorites WHERE user_id = ?`,
-            [user_id]
-        );
-        //debug to check if the list is correct
-        console.log( recipes.map(row => row.recipe_id))
-        // Return the list of recipe IDs
-        //return recipes.map(row => row.recipe_id);
-        return recipes
-    } catch (error) {
-        console.error("Error retrieving favorite recipes:", error);
-        throw new Error("Failed to retrieve favorite recipes");
-    }
-}
-
+  async function getFavoriteRecipes(user_id) {
+    const recipes = await DButils.execQuery(
+      `SELECT r.recipe_id, r.title, r.image, r.readyInMinutes, r.aggregateLikes
+       FROM favorites AS f
+       JOIN recipes AS r ON f.recipe_id = r.recipe_id
+       WHERE f.user_id = '${user_id}'
+       ORDER BY f.favorited_at DESC`
+    );
+    return recipes;
+  }
+  
 module.exports = {
     markAsFavorite,
-    getFavoriteRecipes
+    getFavoriteRecipes,
+    removeFavorite
 };
